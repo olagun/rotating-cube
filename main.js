@@ -1,7 +1,7 @@
 "use strict";
 
 // CONSTANTS
-const SIZE = 200;
+const SIZE = 400;
 const POINT_RADIUS = 5;
 const ORTHO_PROJECTION = [[1, 0, 0], [0, 1, 0], [0, 0, 0]];
 
@@ -105,20 +105,21 @@ function drawLines(matrix, ...verticies) {
 // All the verticies of the cube.
 const verticies = [
   // Front Face
-  vector(SIZE, SIZE, -SIZE),
-  vector(SIZE, -SIZE, -SIZE),
-  vector(-SIZE, -SIZE, -SIZE),
-  vector(-SIZE, SIZE, -SIZE),
+  vector(0.5, 0.5, -0.5),
+  vector(0.5, -0.5, -0.5),
+  vector(-0.5, -0.5, -0.5),
+  vector(-0.5, 0.5, -0.5),
 
   // Back Face
-  vector(SIZE, SIZE, SIZE),
-  vector(SIZE, -SIZE, SIZE),
-  vector(-SIZE, -SIZE, SIZE),
-  vector(-SIZE, SIZE, SIZE)
+  vector(0.5, 0.5, 0.5),
+  vector(0.5, -0.5, 0.5),
+  vector(-0.5, -0.5, 0.5),
+  vector(-0.5, 0.5, 0.5)
 ];
 
 // Base angle (alpha) for the rotation animation.
 let a = 10;
+let dist = 1.5;
 
 // Main loop
 function loop() {
@@ -128,6 +129,7 @@ function loop() {
   const cosA = Math.cos(a);
 
   const projectionMatrix = ORTHO_PROJECTION;
+
   const rotXMatrix = [[1, 0, 0], [0, cosA, -sinA], [0, sinA, cosA]];
   const rotYMatrix = [[cosA, 0, sinA], [0, 1, 0], [-sinA, 0, cosA]];
   const rotZMatrix = [[cosA, -sinA, 0], [sinA, cosA, 0], [0, 0, 1]];
@@ -136,13 +138,24 @@ function loop() {
   for (let i = 0; i < verticies.length; ++i) {
     const vertex = verticies[i];
 
-    const projectedVertex = multiplyList([
-      projectionMatrix,
+    const rotatedVertex = multiplyList([
       rotXMatrix,
       rotYMatrix,
       rotZMatrix,
       vertex
     ]);
+
+    const zScale = 1 / (dist - rotatedVertex[2][0]);
+    const perspectiveMatrix = [[zScale, 0, 0], [0, zScale, 0]];
+    const scaleMatrix = [[SIZE, 0], [0, SIZE]];
+
+    const projectedVertex = multiplyList([
+      scaleMatrix,
+      perspectiveMatrix,
+      rotatedVertex
+    ]);
+
+    // const projectedVertex = multiply(projectionMatrix, scaledVertex);
 
     // Draw and save each projected vertex.
     projectedVerticies.push(projectedVertex);
@@ -150,27 +163,17 @@ function loop() {
   }
 
   // Draw the edges.
-  drawLines(
-    projectedVerticies,
-
+  const _drawLines = drawLines.bind(null, projectedVerticies);
+  for (let i = 0; i < 4; ++i) {
     // Front face
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [3, 0],
+    _drawLines([i, (i + 1) % 4]);
 
     // Back face
-    [4, 5],
-    [5, 6],
-    [6, 7],
-    [7, 4],
+    _drawLines([i + 4, ((i + 1) % 4) + 4]);
 
     // Connecting edges
-    [0, 4],
-    [1, 5],
-    [2, 6],
-    [3, 7]
-  );
+    _drawLines([i, i + 4]);
+  }
 
   // Angle step
   a = (a + 0.01) % 360;
